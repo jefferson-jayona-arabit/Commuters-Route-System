@@ -14,14 +14,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Security configuration.
- *
- * NOTE: /api/users/** is temporarily permitAll(). JwtUtil exists but is not
- * yet wired into this filter chain as a JwtAuthenticationFilter, so nothing
- * currently populates the SecurityContext from a token. Once that filter is
- * added, lock this down to authenticated ADMIN users instead of permitAll().
- */
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -52,10 +45,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-            "http://localhost:5175",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:5174",
-            "http://127.0.0.1:5175"
+              "http://localhost:5173",
+               "http://localhost:5174",
+                "http://localhost:5175",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174",
+                "http://127.0.0.1:5175"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

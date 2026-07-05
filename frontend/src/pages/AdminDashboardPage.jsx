@@ -3,6 +3,7 @@ import Sidebar from '../components/admin/Sidebar.jsx'
 import DashboardOverview from '../components/admin/DashboardOverview.jsx'
 import PlaceholderPanel from '../components/admin/PlaceholderPanel.jsx'
 import UsersPanel from '../components/admin/users/UsersPanel.jsx'
+import LocationPanel from '../components/admin/locations/LocationsPanel.jsx'
 import { ADMIN_MODULES } from '../components/admin/modules.js'
 import '../styles/admin.css'
 
@@ -17,6 +18,9 @@ function AdminDashboardPage() {
     }
     if (activeKey === 'users') {
       return <UsersPanel />
+    }
+    if(activeKey === 'locations'){
+       return <LocationPanel />
     }
     return <PlaceholderPanel label={activeModule?.label ?? ''} />
   }

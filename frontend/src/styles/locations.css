@@ -1,0 +1,560 @@
+/* =====================================================================
+   Locations management — toolbar, filters, table, badges, pagination,
+   modals. Reuses design tokens + .field classes from styles/auth.css.
+   Self-contained: includes its own modal styles so this module doesn't
+   depend on styles/admin-users.css being loaded first.
+   ===================================================================== */
+
+.locations-management {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* --- Toolbar: filters + add button --------------------------------------- */
+.locations-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.location-filters {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.location-search {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+
+.location-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  display: flex;
+}
+
+.location-search-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 9px 12px 9px 34px;
+}
+
+.location-search-input:focus-visible {
+  border-color: var(--color-teal);
+  outline: 2px solid var(--color-teal-light);
+}
+
+.location-type-select {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+}
+
+.locations-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  background: var(--color-teal);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.locations-add-button:hover {
+  background: var(--color-teal-dark);
+}
+
+/* --- Empty state (no matches) --------------------------------------------- */
+.locations-empty-state {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+}
+
+/* --- Table ----------------------------------------------------------------- */
+.location-table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.location-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.location-table thead th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-cream);
+  white-space: nowrap;
+}
+
+.location-table-actions-head {
+  text-align: right;
+}
+
+.location-table tbody td {
+  padding: 13px 16px;
+  font-size: 13px;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+}
+
+.location-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.location-table-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.location-table-truncate {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-table-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.location-table-action {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-teal-dark);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 7px;
+}
+
+.location-table-action:hover {
+  text-decoration: underline;
+}
+
+.location-table-action-danger {
+  color: var(--color-danger);
+}
+
+/* --- Type badges ------------------------------------------------------------- */
+.location-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.location-type-badge-terminal {
+  background: rgba(15, 110, 86, 0.12);
+  color: var(--color-teal-dark);
+}
+
+.location-type-badge-waiting {
+  background: rgba(186, 117, 23, 0.12);
+  color: var(--color-amber);
+}
+
+.location-type-badge-stop {
+  background: rgba(16, 32, 58, 0.08);
+  color: var(--color-ink);
+}
+
+.location-type-badge-landmark {
+  background: transparent;
+  border: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+}
+
+/* --- Pagination --------------------------------------------------------------- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 4px 0;
+}
+
+.pagination-summary {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-page {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.pagination-button {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-teal-dark);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: var(--color-cream);
+}
+
+.pagination-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- View modal fields --------------------------------------------------------- */
+.location-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.location-view-header h4 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.location-view-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.location-view-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.location-view-value {
+  font-size: 13.5px;
+  color: var(--color-text);
+}
+
+.location-textarea {
+  resize: vertical;
+  min-height: 70px;
+  font-family: var(--font-body);
+}
+
+/* --- Location picker (map placeholder) ---------------------------------------- */
+.location-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-teal-dark);
+  background: rgba(15, 110, 86, 0.08);
+  border: 1px solid rgba(15, 110, 86, 0.25);
+  border-radius: var(--radius-md);
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.location-picker-trigger:hover {
+  background: rgba(15, 110, 86, 0.14);
+}
+
+.picker-hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.picker-map {
+  position: relative;
+  height: 62vh;
+  min-height: 340px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+}
+
+.picker-coords {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.picker-coords strong {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+/* =====================================================================
+   Modals (self-contained — same visual language as the rest of the app)
+   ===================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 32, 58, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(16, 32, 58, 0.25);
+}
+
+.modal-card-narrow {
+  max-width: 420px;
+}
+
+.modal-card-wide {
+  width: 80vw;
+  max-width: 1200px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.modal-close:hover {
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-warning-text {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--color-line);
+}
+
+.modal-secondary-button {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.modal-secondary-button:hover {
+  background: var(--color-cream);
+}
+
+.modal-primary-button {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  background: var(--color-teal);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.modal-primary-button:hover {
+  background: var(--color-teal-dark);
+}
+
+.modal-primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-danger-button {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-danger);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.modal-danger-button:hover {
+  opacity: 0.9;
+}
+
+/* =====================================================================
+   Responsive — stacked "label: value" rows on small screens
+   ===================================================================== */
+@media (max-width: 640px) {
+  .modal-card-wide {
+    width: 94vw;
+  }
+
+  .picker-map {
+    height: 45vh;
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 860px) {
+  .location-table {
+    min-width: 0;
+  }
+
+  .location-table thead {
+    display: none;
+  }
+
+  .location-table,
+  .location-table tbody,
+  .location-table tr,
+  .location-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .location-table tr {
+    padding: 14px 16px;
+  }
+
+  .location-table td {
+    border-bottom: none;
+    padding: 5px 0;
+    max-width: none;
+    white-space: normal;
+  }
+
+  .location-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+  }
+
+  .location-table-actions {
+    text-align: left;
+    margin-top: 6px;
+  }
+
+  .locations-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .location-filters {
+    flex-direction: column;
+  }
+
+  .location-search {
+    max-width: none;
+  }
+}
