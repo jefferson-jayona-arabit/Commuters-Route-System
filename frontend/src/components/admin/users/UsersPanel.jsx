@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlusIcon } from './icons.jsx'
 import UserFilters from './UserFilters.jsx'
 import UserTable from './UserTable.jsx'
@@ -6,50 +6,75 @@ import Pagination from './Pagination.jsx'
 import UserFormModal from './UserFormModal.jsx'
 import UserViewModal from './UserViewModal.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { MOCK_USERS } from './mockUsers.js'
+import { fetchUsers, createUser, updateUser, deleteUser } from '../../../services/userService.js'
 import '../../../styles/users.css'
 
 const PAGE_SIZE = 5
+const SEARCH_DEBOUNCE_MS = 350
 
 function UsersPanel() {
-  const [users, setUsers] = useState(MOCK_USERS)
+  const [users, setUsers] = useState([])
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
 
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
   const [activeModal, setActiveModal] = useState(null) // 'add' | 'edit' | 'view' | 'delete' | null
   const [selectedUser, setSelectedUser] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
-  const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase()
+  // Debounce the search box so we're not firing a request on every keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [search])
 
-    return users.filter((user) => {
-      const matchesSearch =
-        query === '' ||
-        `${user.first_name} ${user.last_name}`.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query)
-      const matchesRole = roleFilter === 'all' || user.role === roleFilter
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter
+  async function loadUsers() {
+    setIsLoading(true)
+    setLoadError('')
+    try {
+      const result = await fetchUsers({
+        search: debouncedSearch,
+        role: roleFilter,
+        status: statusFilter,
+        page,
+        size: PAGE_SIZE,
+      })
+      setUsers(result.items)
+      setTotalItems(result.totalItems)
+      setTotalPages(result.totalPages)
+    } catch (error) {
+      setLoadError(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-      return matchesSearch && matchesRole && matchesStatus
-    })
-  }, [users, search, roleFilter, statusFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  )
+  useEffect(() => {
+    loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, roleFilter, statusFilter, page])
 
   function openAddModal() {
     setSelectedUser(null)
+    setFormError('')
     setActiveModal('add')
   }
 
   function openEditModal(user) {
     setSelectedUser(user)
+    setFormError('')
     setActiveModal('edit')
   }
 
@@ -64,51 +89,53 @@ function UsersPanel() {
   }
 
   function closeModal() {
+    if (isSaving) return
     setActiveModal(null)
     setSelectedUser(null)
+    setFormError('')
   }
 
-  // UI-only handlers for now — backend wiring comes in a later phase.
-  function handleAddSubmit(formValues) {
-    const nextId = Math.max(0, ...users.map((user) => user.user_id)) + 1
-    setUsers((current) => [
-      ...current,
-      {
-        user_id: nextId,
-        first_name: formValues.first_name,
-        last_name: formValues.last_name,
-        email: formValues.email,
-        phone_number: formValues.phone_number,
-        role: formValues.role,
-        status: formValues.status,
-        created_at: new Date().toISOString().slice(0, 10),
-      },
-    ])
-    closeModal()
+  async function handleAddSubmit(formValues) {
+    setIsSaving(true)
+    setFormError('')
+    try {
+      await createUser(formValues)
+      closeModal()
+      setPage(1)
+      await loadUsers()
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function handleEditSubmit(formValues) {
-    setUsers((current) =>
-      current.map((user) =>
-        user.user_id === selectedUser.user_id
-          ? {
-              ...user,
-              first_name: formValues.first_name,
-              last_name: formValues.last_name,
-              email: formValues.email,
-              phone_number: formValues.phone_number,
-              role: formValues.role,
-              status: formValues.status,
-            }
-          : user
-      )
-    )
-    closeModal()
+  async function handleEditSubmit(formValues) {
+    setIsSaving(true)
+    setFormError('')
+    try {
+      await updateUser(selectedUser.user_id, formValues)
+      closeModal()
+      await loadUsers()
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function handleDeleteConfirm() {
-    setUsers((current) => current.filter((user) => user.user_id !== selectedUser.user_id))
-    closeModal()
+  async function handleDeleteConfirm() {
+    setIsSaving(true)
+    try {
+      await deleteUser(selectedUser.user_id)
+      closeModal()
+      await loadUsers()
+    } catch (error) {
+      setLoadError(error.message)
+      closeModal()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -116,10 +143,7 @@ function UsersPanel() {
       <div className="users-toolbar">
         <UserFilters
           search={search}
-          onSearchChange={(value) => {
-            setSearch(value)
-            setPage(1)
-          }}
+          onSearchChange={setSearch}
           roleFilter={roleFilter}
           onRoleChange={(value) => {
             setRoleFilter(value)
@@ -138,25 +162,39 @@ function UsersPanel() {
         </button>
       </div>
 
-      <UserTable
-        users={paginatedUsers}
-        onView={openViewModal}
-        onEdit={openEditModal}
-        onDelete={openDeleteConfirm}
-      />
+      {loadError && <div className="users-error">{loadError}</div>}
 
-      {filteredUsers.length > 0 && (
+      {isLoading ? (
+        <div className="users-empty">
+          <p>Loading users…</p>
+        </div>
+      ) : (
+        <UserTable
+          users={users}
+          onView={openViewModal}
+          onEdit={openEditModal}
+          onDelete={openDeleteConfirm}
+        />
+      )}
+
+      {!isLoading && totalItems > 0 && (
         <Pagination
-          page={currentPage}
+          page={page}
           totalPages={totalPages}
-          totalItems={filteredUsers.length}
+          totalItems={totalItems}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />
       )}
 
       {activeModal === 'add' && (
-        <UserFormModal mode="add" onSubmit={handleAddSubmit} onClose={closeModal} />
+        <UserFormModal
+          mode="add"
+          onSubmit={handleAddSubmit}
+          onClose={closeModal}
+          isSaving={isSaving}
+          errorMessage={formError}
+        />
       )}
 
       {activeModal === 'edit' && selectedUser && (
@@ -167,11 +205,14 @@ function UsersPanel() {
             last_name: selectedUser.last_name,
             email: selectedUser.email,
             phone_number: selectedUser.phone_number,
+            address: selectedUser.address,
             role: selectedUser.role,
             status: selectedUser.status,
           }}
           onSubmit={handleEditSubmit}
           onClose={closeModal}
+          isSaving={isSaving}
+          errorMessage={formError}
         />
       )}
 
@@ -182,8 +223,8 @@ function UsersPanel() {
       {activeModal === 'delete' && selectedUser && (
         <ConfirmDialog
           title="Delete this user?"
-          message={`This will remove ${selectedUser.first_name} ${selectedUser.last_name} from the users list. This action cannot be undone.`}
-          confirmLabel="Delete"
+          message={`This will permanently remove ${selectedUser.first_name} ${selectedUser.last_name} from the system.`}
+          confirmLabel={isSaving ? 'Deleting…' : 'Delete'}
           onConfirm={handleDeleteConfirm}
           onCancel={closeModal}
         />

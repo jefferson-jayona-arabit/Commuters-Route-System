@@ -1,236 +1,243 @@
-import { useEffect, useState } from 'react'
-import { PlusIcon } from './icons.jsx'
-import UserFilters from './UserFilters.jsx'
-import UserTable from './UserTable.jsx'
-import Pagination from './Pagination.jsx'
-import UserFormModal from './UserFormModal.jsx'
-import UserViewModal from './UserViewModal.jsx'
-import ConfirmDialog from './ConfirmDialog.jsx'
-import { fetchUsers, createUser, updateUser, deleteUser } from '../../../services/userService.js'
+import { useState } from 'react'
 import '../../../styles/users.css'
 
-const PAGE_SIZE = 5
-const SEARCH_DEBOUNCE_MS = 350
+function UserFormModal({ mode, initialValues, onSubmit, onClose, isSaving, errorMessage }) {
+  const [formValues, setFormValues] = useState(
+    initialValues || {
+      first_name: '',
+      last_name: '',
+      email: '',
+      password: '',
+      phone_number: '',
+      address: '',
+      role: 'user',
+      status: 'active',
+    }
+  )
 
-function UsersPanel() {
-  const [users, setUsers] = useState([])
-  const [totalItems, setTotalItems] = useState(0)
-  const [totalPages, setTotalPages] = useState(1)
+  const [validationErrors, setValidationErrors] = useState({})
 
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [page, setPage] = useState(1)
-
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  const [activeModal, setActiveModal] = useState(null) // 'add' | 'edit' | 'view' | 'delete' | null
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [formError, setFormError] = useState('')
-
-  // Debounce the search box so we're not firing a request on every keystroke.
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(search)
-      setPage(1)
-    }, SEARCH_DEBOUNCE_MS)
-    return () => clearTimeout(timeout)
-  }, [search])
-
-  async function loadUsers() {
-    setIsLoading(true)
-    setLoadError('')
-    try {
-      const result = await fetchUsers({
-        search: debouncedSearch,
-        role: roleFilter,
-        status: statusFilter,
-        page,
-        size: PAGE_SIZE,
-      })
-      setUsers(result.items)
-      setTotalItems(result.totalItems)
-      setTotalPages(result.totalPages)
-    } catch (error) {
-      setLoadError(error.message)
-    } finally {
-      setIsLoading(false)
+  function handleChange(e) {
+    const { name, value } = e.target
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: '',
+      }))
     }
   }
 
-  useEffect(() => {
-    loadUsers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, roleFilter, statusFilter, page])
+  function validateForm() {
+    const errors = {}
 
-  function openAddModal() {
-    setSelectedUser(null)
-    setFormError('')
-    setActiveModal('add')
-  }
-
-  function openEditModal(user) {
-    setSelectedUser(user)
-    setFormError('')
-    setActiveModal('edit')
-  }
-
-  function openViewModal(user) {
-    setSelectedUser(user)
-    setActiveModal('view')
-  }
-
-  function openDeleteConfirm(user) {
-    setSelectedUser(user)
-    setActiveModal('delete')
-  }
-
-  function closeModal() {
-    if (isSaving) return
-    setActiveModal(null)
-    setSelectedUser(null)
-    setFormError('')
-  }
-
-  async function handleAddSubmit(formValues) {
-    setIsSaving(true)
-    setFormError('')
-    try {
-      await createUser(formValues)
-      closeModal()
-      setPage(1)
-      await loadUsers()
-    } catch (error) {
-      setFormError(error.message)
-    } finally {
-      setIsSaving(false)
+    if (!formValues.first_name.trim()) errors.first_name = 'First name is required'
+    if (!formValues.last_name.trim()) errors.last_name = 'Last name is required'
+    if (!formValues.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formValues.email)) {
+      errors.email = 'Invalid email format'
     }
+
+    if (mode === 'add') {
+      if (!formValues.password) {
+        errors.password = 'Password is required'
+      } else if (formValues.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters'
+      }
+    }
+
+    if (formValues.phone_number && !/^[0-9\s\-\+\(\)]+$/.test(formValues.phone_number)) {
+      errors.phone_number = 'Invalid phone number format'
+    }
+
+    return errors
   }
 
-  async function handleEditSubmit(formValues) {
-    setIsSaving(true)
-    setFormError('')
-    try {
-      await updateUser(selectedUser.user_id, formValues)
-      closeModal()
-      await loadUsers()
-    } catch (error) {
-      setFormError(error.message)
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  function handleSubmit(e) {
+    e.preventDefault()
 
-  async function handleDeleteConfirm() {
-    setIsSaving(true)
-    try {
-      await deleteUser(selectedUser.user_id)
-      closeModal()
-      await loadUsers()
-    } catch (error) {
-      setLoadError(error.message)
-      closeModal()
-    } finally {
-      setIsSaving(false)
+    const errors = validateForm()
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      return
     }
+
+    onSubmit(formValues)
   }
 
   return (
-    <div className="users-panel">
-      <div className="users-toolbar">
-        <UserFilters
-          search={search}
-          onSearchChange={setSearch}
-          roleFilter={roleFilter}
-          onRoleChange={(value) => {
-            setRoleFilter(value)
-            setPage(1)
-          }}
-          statusFilter={statusFilter}
-          onStatusChange={(value) => {
-            setStatusFilter(value)
-            setPage(1)
-          }}
-        />
-
-        <button type="button" className="btn btn-primary" onClick={openAddModal}>
-          <PlusIcon />
-          Add User
-        </button>
-      </div>
-
-      {loadError && <div className="users-error">{loadError}</div>}
-
-      {isLoading ? (
-        <div className="users-empty">
-          <p>Loading users…</p>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{mode === 'add' ? 'Add New User' : 'Edit User'}</h2>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            disabled={isSaving}
+            aria-label="Close modal"
+          >
+            ×
+          </button>
         </div>
-      ) : (
-        <UserTable
-          users={users}
-          onView={openViewModal}
-          onEdit={openEditModal}
-          onDelete={openDeleteConfirm}
-        />
-      )}
 
-      {!isLoading && totalItems > 0 && (
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-        />
-      )}
+        <form onSubmit={handleSubmit} className="user-form">
+          {errorMessage && <div className="form-error">{errorMessage}</div>}
 
-      {activeModal === 'add' && (
-        <UserFormModal
-          mode="add"
-          onSubmit={handleAddSubmit}
-          onClose={closeModal}
-          isSaving={isSaving}
-          errorMessage={formError}
-        />
-      )}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="first_name">First Name *</label>
+              <input
+                type="text"
+                id="first_name"
+                name="first_name"
+                value={formValues.first_name}
+                onChange={handleChange}
+                disabled={isSaving}
+                className={validationErrors.first_name ? 'input-error' : ''}
+              />
+              {validationErrors.first_name && (
+                <span className="field-error">{validationErrors.first_name}</span>
+              )}
+            </div>
 
-      {activeModal === 'edit' && selectedUser && (
-        <UserFormModal
-          mode="edit"
-          initialValues={{
-            first_name: selectedUser.first_name,
-            last_name: selectedUser.last_name,
-            email: selectedUser.email,
-            phone_number: selectedUser.phone_number,
-            address: selectedUser.address,
-            role: selectedUser.role,
-            status: selectedUser.status,
-          }}
-          onSubmit={handleEditSubmit}
-          onClose={closeModal}
-          isSaving={isSaving}
-          errorMessage={formError}
-        />
-      )}
+            <div className="form-group">
+              <label htmlFor="last_name">Last Name *</label>
+              <input
+                type="text"
+                id="last_name"
+                name="last_name"
+                value={formValues.last_name}
+                onChange={handleChange}
+                disabled={isSaving}
+                className={validationErrors.last_name ? 'input-error' : ''}
+              />
+              {validationErrors.last_name && (
+                <span className="field-error">{validationErrors.last_name}</span>
+              )}
+            </div>
+          </div>
 
-      {activeModal === 'view' && selectedUser && (
-        <UserViewModal user={selectedUser} onClose={closeModal} />
-      )}
+          <div className="form-group">
+            <label htmlFor="email">Email *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formValues.email}
+              onChange={handleChange}
+              disabled={isSaving}
+              className={validationErrors.email ? 'input-error' : ''}
+            />
+            {validationErrors.email && (
+              <span className="field-error">{validationErrors.email}</span>
+            )}
+          </div>
 
-      {activeModal === 'delete' && selectedUser && (
-        <ConfirmDialog
-          title="Delete this user?"
-          message={`This will permanently remove ${selectedUser.first_name} ${selectedUser.last_name} from the system.`}
-          confirmLabel={isSaving ? 'Deleting…' : 'Delete'}
-          onConfirm={handleDeleteConfirm}
-          onCancel={closeModal}
-        />
-      )}
+          {mode === 'add' && (
+            <div className="form-group">
+              <label htmlFor="password">Password *</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formValues.password}
+                onChange={handleChange}
+                disabled={isSaving}
+                className={validationErrors.password ? 'input-error' : ''}
+              />
+              {validationErrors.password && (
+                <span className="field-error">{validationErrors.password}</span>
+              )}
+            </div>
+          )}
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="phone_number">Phone Number</label>
+              <input
+                type="tel"
+                id="phone_number"
+                name="phone_number"
+                value={formValues.phone_number}
+                onChange={handleChange}
+                disabled={isSaving}
+                className={validationErrors.phone_number ? 'input-error' : ''}
+              />
+              {validationErrors.phone_number && (
+                <span className="field-error">{validationErrors.phone_number}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="address">Address</label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formValues.address}
+                onChange={handleChange}
+                disabled={isSaving}
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="role">Role</label>
+              <select
+                id="role"
+                name="role"
+                value={formValues.role}
+                onChange={handleChange}
+                disabled={isSaving}
+              >
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="status">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={formValues.status}
+                onChange={handleChange}
+                disabled={isSaving}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onClose}
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : mode === 'add' ? 'Add User' : 'Update User'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
 
-export default UsersPanel
+export default UserFormModal

@@ -41,7 +41,7 @@ function LoginPage() {
         role: data.role,
       }))
 
-      if (data.role === 'admin') {
+      if (data.role === 'ADMIN') {
         navigate('/admin/dashboard')
       } else {
         navigate('/user/dashboard')
