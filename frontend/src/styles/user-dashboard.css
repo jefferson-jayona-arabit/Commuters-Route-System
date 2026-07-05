@@ -1,0 +1,376 @@
+/* =====================================================================
+   User Dashboard — map + floating search card + route suggestions
+   Reuses the design tokens defined in styles/auth.css
+   ===================================================================== */
+
+.user-dashboard {
+  min-height: 100vh;
+  background: var(--color-cream);
+  padding-bottom: 48px;
+}
+
+/* --- Top header ---------------------------------------------------------- */
+.user-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--color-ink);
+  color: var(--color-text-inverse);
+}
+
+.user-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-topbar-mark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  background: var(--color-teal);
+  color: var(--color-text-inverse);
+  padding: 6px 9px;
+  border-radius: 6px;
+}
+
+.user-topbar-greeting {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.user-topbar-sub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text-inverse-muted);
+  margin: 2px 0 0;
+}
+
+/* --- Map hero ------------------------------------------------------------- */
+.map-card {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+}
+
+.map-card-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-card-note {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--color-line);
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+/* --- Floating search card -------------------------------------------------- */
+.search-card-wrap {
+  padding: 0 20px;
+  margin-top: -40px;
+  position: relative;
+  z-index: 2;
+}
+
+.search-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 12px 30px rgba(16, 32, 58, 0.12);
+  padding: 20px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.search-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-cream);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  outline-offset: 2px;
+}
+
+.search-input::placeholder {
+  color: #a6a498;
+}
+
+.search-input:focus-visible {
+  border-color: var(--color-teal);
+  outline: 2px solid var(--color-teal-light);
+}
+
+.gps-button {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-teal-dark);
+  background: rgba(15, 110, 86, 0.08);
+  border: 1px solid rgba(15, 110, 86, 0.25);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gps-button:hover {
+  background: rgba(15, 110, 86, 0.14);
+}
+
+.search-submit {
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  background: var(--color-teal);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.search-submit:hover {
+  background: var(--color-teal-dark);
+}
+
+.search-submit:focus-visible {
+  outline: 2px solid var(--color-teal-light);
+  outline-offset: 2px;
+}
+
+/* --- Suggestions section ---------------------------------------------------- */
+.suggestions-section {
+  max-width: 760px;
+  margin: 36px auto 0;
+  padding: 0 20px;
+}
+
+.suggestions-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.suggestions-heading h2 {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.suggestions-count {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.suggestion-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.suggestion-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.suggestion-tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-amber);
+  border: 1px solid var(--color-amber-light);
+  background: rgba(186, 117, 23, 0.08);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.suggestion-route-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 14px;
+}
+
+.suggestion-stops {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 2px;
+  border-left: 2px dashed var(--color-line);
+  margin-left: 4px;
+}
+
+.suggestion-stop {
+  display: flex;
+  gap: 12px;
+  margin-left: -7px;
+}
+
+.suggestion-stop-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.suggestion-stop-dot-start {
+  background: var(--color-teal);
+}
+
+.suggestion-stop-dot-end {
+  background: var(--color-amber);
+}
+
+.suggestion-stop-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.suggestion-stop-value {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 1px 0 0;
+}
+
+.suggestion-walk-hint {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin: 2px 0 0;
+}
+
+.suggestion-meta {
+  display: flex;
+  gap: 18px;
+  margin: 14px 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.suggestion-meta strong {
+  color: var(--color-text);
+}
+
+.suggestion-view-button {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-teal-dark);
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.suggestion-view-button:hover {
+  background: rgba(15, 110, 86, 0.06);
+  border-color: var(--color-teal-light);
+}
+
+/* --- Vehicle badges --------------------------------------------------------- */
+.vehicle-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.vehicle-badge-teal {
+  background: rgba(15, 110, 86, 0.12);
+  color: var(--color-teal-dark);
+}
+
+.vehicle-badge-amber {
+  background: rgba(186, 117, 23, 0.12);
+  color: var(--color-amber);
+}
+
+.vehicle-badge-ink {
+  background: rgba(16, 32, 58, 0.08);
+  color: var(--color-ink);
+}
+
+.vehicle-badge-outline {
+  background: transparent;
+  border: 1px solid var(--color-line);
+  color: var(--color-text-muted);
+}
+
+/* =====================================================================
+   Responsive
+   ===================================================================== */
+@media (max-width: 640px) {
+  .map-card {
+    height: 200px;
+  }
+
+  .search-input-row {
+    flex-direction: column;
+  }
+
+  .gps-button {
+    padding: 10px 14px;
+  }
+
+  .suggestion-meta {
+    flex-wrap: wrap;
+    gap: 10px 18px;
+  }
+}
