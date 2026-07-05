@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Centralized exception handling for the auth endpoints.
+ * Centralized exception handling for the auth and users endpoints.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -32,6 +32,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccountInactiveException.class)
     public ResponseEntity<ApiResponse> handleAccountInactive(AccountInactiveException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.of(false, ex.getMessage()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleUserNotFound(UserNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.of(false, ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.of(false, ex.getMessage()));
     }
 

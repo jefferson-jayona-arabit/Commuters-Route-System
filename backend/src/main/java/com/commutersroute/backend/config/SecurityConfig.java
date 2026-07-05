@@ -16,9 +16,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * Security configuration scoped to this login/register-only backend.
- * Only /api/auth/** endpoints exist, and they are all publicly accessible
- * (registration and login cannot require authentication by definition).
+ * Security configuration.
+ *
+ * NOTE: /api/users/** is temporarily permitAll(). JwtUtil exists but is not
+ * yet wired into this filter chain as a JwtAuthenticationFilter, so nothing
+ * currently populates the SecurityContext from a token. Once that filter is
+ * added, lock this down to authenticated ADMIN users instead of permitAll().
  */
 @Configuration
 @EnableWebSecurity
@@ -40,6 +43,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/users/**").permitAll() // TODO: restrict to ADMIN once JWT filter is wired in
                 .anyRequest().authenticated()
             )
             .httpBasic(basic -> basic.disable())

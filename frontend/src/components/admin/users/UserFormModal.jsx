@@ -1,168 +1,236 @@
-import { useState } from 'react'
-import { CloseIcon, UploadIcon } from './icons.jsx'
-import { EMPTY_USER_FORM } from './mockUsers.js'
+import { useEffect, useState } from 'react'
+import { PlusIcon } from './icons.jsx'
+import UserFilters from './UserFilters.jsx'
+import UserTable from './UserTable.jsx'
+import Pagination from './Pagination.jsx'
+import UserFormModal from './UserFormModal.jsx'
+import UserViewModal from './UserViewModal.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
+import { fetchUsers, createUser, updateUser, deleteUser } from '../../../services/userService.js'
+import '../../../styles/users.css'
 
-/**
- * mode: 'add' | 'edit'
- * initialValues: prefilled fields when editing an existing user
- * onSubmit(formValues) — wiring to the API happens in a later phase
- */
-function UserFormModal({ mode = 'add', initialValues, onSubmit, onClose }) {
-  const [values, setValues] = useState({ ...EMPTY_USER_FORM, ...initialValues })
-  const [photoName, setPhotoName] = useState('')
+const PAGE_SIZE = 5
+const SEARCH_DEBOUNCE_MS = 350
 
-  const isEdit = mode === 'edit'
+function UsersPanel() {
+  const [users, setUsers] = useState([])
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
-  function handleChange(field, value) {
-    setValues((current) => ({ ...current, [field]: value }))
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
+
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  const [activeModal, setActiveModal] = useState(null) // 'add' | 'edit' | 'view' | 'delete' | null
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  // Debounce the search box so we're not firing a request on every keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [search])
+
+  async function loadUsers() {
+    setIsLoading(true)
+    setLoadError('')
+    try {
+      const result = await fetchUsers({
+        search: debouncedSearch,
+        role: roleFilter,
+        status: statusFilter,
+        page,
+        size: PAGE_SIZE,
+      })
+      setUsers(result.items)
+      setTotalItems(result.totalItems)
+      setTotalPages(result.totalPages)
+    } catch (error) {
+      setLoadError(error.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function handlePhotoChange(event) {
-    const file = event.target.files?.[0]
-    setPhotoName(file ? file.name : '')
-    handleChange('profile_photo', file ?? null)
+  useEffect(() => {
+    loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, roleFilter, statusFilter, page])
+
+  function openAddModal() {
+    setSelectedUser(null)
+    setFormError('')
+    setActiveModal('add')
   }
 
-  function handleSubmit(event) {
-    event.preventDefault()
-    onSubmit?.(values)
+  function openEditModal(user) {
+    setSelectedUser(user)
+    setFormError('')
+    setActiveModal('edit')
+  }
+
+  function openViewModal(user) {
+    setSelectedUser(user)
+    setActiveModal('view')
+  }
+
+  function openDeleteConfirm(user) {
+    setSelectedUser(user)
+    setActiveModal('delete')
+  }
+
+  function closeModal() {
+    if (isSaving) return
+    setActiveModal(null)
+    setSelectedUser(null)
+    setFormError('')
+  }
+
+  async function handleAddSubmit(formValues) {
+    setIsSaving(true)
+    setFormError('')
+    try {
+      await createUser(formValues)
+      closeModal()
+      setPage(1)
+      await loadUsers()
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleEditSubmit(formValues) {
+    setIsSaving(true)
+    setFormError('')
+    try {
+      await updateUser(selectedUser.user_id, formValues)
+      closeModal()
+      await loadUsers()
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    setIsSaving(true)
+    try {
+      await deleteUser(selectedUser.user_id)
+      closeModal()
+      await loadUsers()
+    } catch (error) {
+      setLoadError(error.message)
+      closeModal()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
-    <div className="modal-overlay" role="presentation" onClick={onClose}>
-      <div
-        className="modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="user-form-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h2 id="user-form-title">{isEdit ? 'Edit User' : 'Add User'}</h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            <CloseIcon />
-          </button>
-        </div>
+    <div className="users-panel">
+      <div className="users-toolbar">
+        <UserFilters
+          search={search}
+          onSearchChange={setSearch}
+          roleFilter={roleFilter}
+          onRoleChange={(value) => {
+            setRoleFilter(value)
+            setPage(1)
+          }}
+          statusFilter={statusFilter}
+          onStatusChange={(value) => {
+            setStatusFilter(value)
+            setPage(1)
+          }}
+        />
 
-        <form className="user-form" onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-field">
-              <label htmlFor="first_name">First Name</label>
-              <input
-                id="first_name"
-                type="text"
-                required
-                value={values.first_name}
-                onChange={(event) => handleChange('first_name', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="last_name">Last Name</label>
-              <input
-                id="last_name"
-                type="text"
-                required
-                value={values.last_name}
-                onChange={(event) => handleChange('last_name', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field form-field-wide">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={values.email}
-                onChange={(event) => handleChange('email', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="password">{isEdit ? 'New Password' : 'Password'}</label>
-              <input
-                id="password"
-                type="password"
-                placeholder={isEdit ? 'Leave blank to keep current' : ''}
-                required={!isEdit}
-                value={values.password}
-                onChange={(event) => handleChange('password', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="phone_number">Phone Number</label>
-              <input
-                id="phone_number"
-                type="tel"
-                value={values.phone_number}
-                onChange={(event) => handleChange('phone_number', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field form-field-wide">
-              <label htmlFor="address">Address</label>
-              <input
-                id="address"
-                type="text"
-                value={values.address}
-                onChange={(event) => handleChange('address', event.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="role">Role</label>
-              <select
-                id="role"
-                value={values.role}
-                onChange={(event) => handleChange('role', event.target.value)}
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="status">Status</label>
-              <select
-                id="status"
-                value={values.status}
-                onChange={(event) => handleChange('status', event.target.value)}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-
-            <div className="form-field form-field-wide">
-              <label htmlFor="profile_photo">Profile Photo (optional)</label>
-              <label className="file-upload" htmlFor="profile_photo">
-                <UploadIcon />
-                <span>{photoName || 'Choose a file…'}</span>
-              </label>
-              <input
-                id="profile_photo"
-                type="file"
-                accept="image/*"
-                className="file-upload-input"
-                onChange={handlePhotoChange}
-              />
-            </div>
-          </div>
-
-          <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {isEdit ? 'Save Changes' : 'Add User'}
-            </button>
-          </div>
-        </form>
+        <button type="button" className="btn btn-primary" onClick={openAddModal}>
+          <PlusIcon />
+          Add User
+        </button>
       </div>
+
+      {loadError && <div className="users-error">{loadError}</div>}
+
+      {isLoading ? (
+        <div className="users-empty">
+          <p>Loading users…</p>
+        </div>
+      ) : (
+        <UserTable
+          users={users}
+          onView={openViewModal}
+          onEdit={openEditModal}
+          onDelete={openDeleteConfirm}
+        />
+      )}
+
+      {!isLoading && totalItems > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
+      )}
+
+      {activeModal === 'add' && (
+        <UserFormModal
+          mode="add"
+          onSubmit={handleAddSubmit}
+          onClose={closeModal}
+          isSaving={isSaving}
+          errorMessage={formError}
+        />
+      )}
+
+      {activeModal === 'edit' && selectedUser && (
+        <UserFormModal
+          mode="edit"
+          initialValues={{
+            first_name: selectedUser.first_name,
+            last_name: selectedUser.last_name,
+            email: selectedUser.email,
+            phone_number: selectedUser.phone_number,
+            address: selectedUser.address,
+            role: selectedUser.role,
+            status: selectedUser.status,
+          }}
+          onSubmit={handleEditSubmit}
+          onClose={closeModal}
+          isSaving={isSaving}
+          errorMessage={formError}
+        />
+      )}
+
+      {activeModal === 'view' && selectedUser && (
+        <UserViewModal user={selectedUser} onClose={closeModal} />
+      )}
+
+      {activeModal === 'delete' && selectedUser && (
+        <ConfirmDialog
+          title="Delete this user?"
+          message={`This will permanently remove ${selectedUser.first_name} ${selectedUser.last_name} from the system.`}
+          confirmLabel={isSaving ? 'Deleting…' : 'Delete'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={closeModal}
+        />
+      )}
     </div>
   )
 }
 
-export default UserFormModal
+export default UsersPanel
