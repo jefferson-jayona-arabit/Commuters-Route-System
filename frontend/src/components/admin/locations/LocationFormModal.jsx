@@ -12,7 +12,7 @@ const EMPTY_FORM = {
   description: '',
 }
 
-function LocationFormModal({ mode, initialData, onSubmit, onClose }) {
+function LocationFormModal({ mode, initialData, serverError, isSubmitting, onSubmit, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [isPickerOpen, setIsPickerOpen] = useState(false)
@@ -174,11 +174,14 @@ function LocationFormModal({ mode, initialData, onSubmit, onClose }) {
           </div>
 
           <div className="modal-footer">
+            {serverError && <p className="auth-server-error modal-form-error">{serverError}</p>}
             <button type="button" className="modal-secondary-button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="modal-primary-button">
-              {mode === 'edit' ? 'Save changes' : 'Add location'}
+            <button type="submit" className="modal-primary-button" disabled={isSubmitting}>
+              {isSubmitting
+                ? 'Saving…'
+                : mode === 'edit' ? 'Save changes' : 'Add location'}
             </button>
           </div>
         </form>

@@ -1,4 +1,4 @@
-function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }) {
+function ConfirmDialog({ title, message, confirmLabel = 'Delete', error, isConfirming, onConfirm, onCancel }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card modal-card-narrow">
@@ -11,14 +11,15 @@ function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onC
 
         <div className="modal-body">
           <p className="modal-warning-text">{message}</p>
+          {error && <p className="auth-server-error">{error}</p>}
         </div>
 
         <div className="modal-footer">
           <button type="button" className="modal-secondary-button" onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className="modal-danger-button" onClick={onConfirm}>
-            {confirmLabel}
+          <button type="button" className="modal-danger-button" onClick={onConfirm} disabled={isConfirming}>
+            {isConfirming ? 'Deleting…' : confirmLabel}
           </button>
         </div>
       </div>

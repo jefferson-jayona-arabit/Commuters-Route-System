@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import LocationFilters from './LocationFilters.jsx'
 import LocationTable from './LocationTable.jsx'
 import LocationFormModal from './LocationFormModal.jsx'
@@ -6,91 +6,133 @@ import LocationViewModal from './LocationViewModal.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Pagination from './Pagination.jsx'
 import { PlusIcon } from './icons.jsx'
-import { SAMPLE_LOCATIONS } from './sampleLocations.js'
+import { fetchLocations, createLocation, updateLocation, deleteLocation } from '../../../services/LocationService.js'
 import '../../../styles/locations.css'
 
 const PAGE_SIZE = 5
+const SEARCH_DEBOUNCE_MS = 400
 
-/**
- * Design-stage implementation. `locations` starts seeded with sample
- * placeholder rows (see sampleLocations.js) purely to demonstrate the
- * table/filter/pagination layout — this is NOT real data from the
- * database. Add/Edit/Delete only update local component state for now.
- * Swap in GET/POST/PUT/DELETE `/api/admin/locations` in a later phase.
- */
 function LocationsPanel() {
-  const [locations, setLocations] = useState(SAMPLE_LOCATIONS)
+  const [locations, setLocations] = useState([])
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
 
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+
   const [formMode, setFormMode] = useState(null) // 'create' | 'edit' | null
   const [editingLocation, setEditingLocation] = useState(null)
+  const [formError, setFormError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [viewingLocation, setViewingLocation] = useState(null)
   const [deletingLocation, setDeletingLocation] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const filtered = locations.filter((loc) => {
-    const matchesType = typeFilter === 'all' || loc.locationType === typeFilter
-    const term = searchTerm.trim().toLowerCase()
-    const matchesSearch =
-      term === '' ||
-      loc.locationName.toLowerCase().includes(term) ||
-      loc.address.toLowerCase().includes(term)
-    return matchesType && matchesSearch
-  })
+  // Debounce the search box so we don't fire a request on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-
+  // Reset to page 1 whenever the search term or type filter actually changes.
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, typeFilter])
+  }, [debouncedSearch, typeFilter])
 
-  function getCurrentAdminName() {
+  const loadLocations = useCallback(async () => {
+    setIsLoading(true)
+    setLoadError('')
     try {
-      const stored = JSON.parse(localStorage.getItem('crs_user'))
-      if (stored?.firstName) return `${stored.firstName} ${stored.lastName || ''}`.trim()
-    } catch {
-      // ignore malformed/missing localStorage value
+      const data = await fetchLocations({
+        search: debouncedSearch,
+        type: typeFilter === 'all' ? undefined : typeFilter,
+        page: currentPage - 1, // Spring's Pageable is 0-indexed
+        size: PAGE_SIZE,
+      })
+      setLocations(data.content)
+      setTotalPages(Math.max(1, data.totalPages))
+      setTotalItems(data.totalElements)
+    } catch (error) {
+      setLoadError(error.message)
+    } finally {
+      setIsLoading(false)
     }
-    return 'Admin'
-  }
+  }, [debouncedSearch, typeFilter, currentPage])
+
+  useEffect(() => {
+    loadLocations()
+  }, [loadLocations])
 
   function openAddForm() {
     setEditingLocation(null)
+    setFormError('')
     setFormMode('create')
   }
 
   function openEditForm(location) {
     setEditingLocation(location)
+    setFormError('')
     setFormMode('edit')
   }
 
   function closeForm() {
     setFormMode(null)
     setEditingLocation(null)
+    setFormError('')
   }
 
-  function handleFormSubmit(formData) {
-    if (formMode === 'edit' && editingLocation) {
-      setLocations((prev) =>
-        prev.map((loc) => (loc.id === editingLocation.id ? { ...loc, ...formData } : loc))
-      )
-    } else {
-      const newLocation = {
-        id: locations.length ? Math.max(...locations.map((l) => l.id)) + 1 : 1,
-        ...formData,
-        createdBy: getCurrentAdminName(),
-        createdAt: new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }),
-      }
-      setLocations((prev) => [newLocation, ...prev])
+  async function handleFormSubmit(formData) {
+    setFormError('')
+    setIsSubmitting(true)
+
+    const payload = {
+      locationName: formData.locationName,
+      locationType: formData.locationType,
+      address: formData.address,
+      description: formData.description,
+      latitude: Number(formData.latitude),
+      longitude: Number(formData.longitude),
     }
-    closeForm()
+
+    try {
+      if (formMode === 'edit' && editingLocation) {
+        await updateLocation(editingLocation.id, payload)
+      } else {
+        await createLocation(payload)
+      }
+      closeForm()
+      loadLocations()
+    } catch (error) {
+      setFormError(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  function handleConfirmDelete() {
-    setLocations((prev) => prev.filter((loc) => loc.id !== deletingLocation.id))
-    setDeletingLocation(null)
+  async function handleConfirmDelete() {
+    setDeleteError('')
+    setIsDeleting(true)
+    try {
+      await deleteLocation(deletingLocation.id)
+      setDeletingLocation(null)
+      // If we just deleted the last row on a page beyond page 1, step back a page.
+      if (locations.length === 1 && currentPage > 1) {
+        setCurrentPage((prev) => prev - 1)
+      } else {
+        loadLocations()
+      }
+    } catch (error) {
+      setDeleteError(error.message)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -107,14 +149,28 @@ function LocationsPanel() {
         </button>
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading && (
+        <div className="locations-empty-state">
+          <p>Loading locations…</p>
+        </div>
+      )}
+
+      {!isLoading && loadError && (
+        <div className="locations-empty-state">
+          <p>{loadError}</p>
+        </div>
+      )}
+
+      {!isLoading && !loadError && locations.length === 0 && (
         <div className="locations-empty-state">
           <p>No locations match your search or filter.</p>
         </div>
-      ) : (
+      )}
+
+      {!isLoading && !loadError && locations.length > 0 && (
         <>
           <LocationTable
-            locations={paginated}
+            locations={locations}
             onView={setViewingLocation}
             onEdit={openEditForm}
             onDelete={setDeletingLocation}
@@ -122,7 +178,7 @@ function LocationsPanel() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={filtered.length}
+            totalItems={totalItems}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
           />
@@ -133,6 +189,8 @@ function LocationsPanel() {
         <LocationFormModal
           mode={formMode}
           initialData={editingLocation}
+          serverError={formError}
+          isSubmitting={isSubmitting}
           onSubmit={handleFormSubmit}
           onClose={closeForm}
         />
@@ -146,8 +204,13 @@ function LocationsPanel() {
         <ConfirmDialog
           title="Delete location"
           message={`Are you sure you want to delete "${deletingLocation.locationName}"? This cannot be undone.`}
+          error={deleteError}
+          isConfirming={isDeleting}
           onConfirm={handleConfirmDelete}
-          onCancel={() => setDeletingLocation(null)}
+          onCancel={() => {
+            setDeletingLocation(null)
+            setDeleteError('')
+          }}
         />
       )}
     </div>
